@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+
+    web:
+        build: .
+        command: pipenv run python /code/manage.py runserver 0.0.0.0:8000
+        environment:
+            - ENVIRONMENT=${ENVIRONMENT}
+            - SECRET_KEY=${SECRET_KEY}
+            - DEBUG=${DEBUG}
+            - CLOUD_NAME=${CLOUD_NAME}
+            - API_KEY=${API_KEY}
+            - API_SECRET=${API_KEY}
+            - REDIS_PASSWORD=${REDIS_PASSWORD}
+            - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+            - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+            - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
+        volumes:
+            - .:/code
+        ports:
+            - 8000:8000
+        depends_on:
+            - db
+            - redis
+
+    worker:
+        build: .
+        command: pipenv run python /code/manage.py rqworker default
+        environment:
+            - DEBUG=${DEBUG}
+        volumes:
+            - .:/code
+        depends_on:
+            - web
+
+    db:
+        image: postgres:12.0-alpine
+        restart: always
+        environment:
+            - POSTGRES_DB=${POSTGRES_DB}
+            - POSTGRES_USER=${POSTGRES_USER}
+            - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+        ports:
+            - "5432:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data/
+
+    redis:
+        image: redis:alpine
+
+volumes:
+    postgres_data:
+
+
+
+

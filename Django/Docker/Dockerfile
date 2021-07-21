@@ -1,6 +1,9 @@
 # Pull base image
 FROM python:3.8-slim
 
+# File Author / Maintainer
+MAINTAINER william kwabla "paawilly17@gmail.com"
+
 # Set environment varibales
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1

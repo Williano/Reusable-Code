@@ -14,13 +14,14 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
-from django.conf.urls.static import static
+
 
 urlpatterns = [
     # Django Admin
-    path('admin/', admin.site.urls),
+    path('dashboard/', admin.site.urls),
 
     # User management
 
@@ -30,11 +31,19 @@ urlpatterns = [
     # Local Apps
 ]
 
+# Serve Static and Media in development mode
 if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 
 # Admin page Settings
-admin.site.site_header = "Kotoko Express Admin"
-admin.site.site_title = "Kotoko Express Portal"
-admin.site.index_title = "Welcome to Kotoko Express Portal"
+admin.site.site_header = "Kotoko Portal Admin"
+admin.site.site_title = "Kotoko Portal Admin"
+admin.site.index_title = "Welcome to Kotoko Portal Admin"
+
+# Override default error pages
+handler404 = 'errors.views.page_not_found_views.page_not_found'
+handler500 = 'errors.views.server_error_views.server_error'
+handler403 = 'errors.views.permission_denied_views.permission_denied'
+

@@ -1,0 +1,15 @@
+build:
+  docker:
+    web: Dockerfile
+
+release:
+  image: web
+  command:
+    - python manage.py migrate
+
+run:
+  web: gunicorn kotoko_express_dashboard.wsgi
+  worker:
+    command:
+      - python manage.py rqworker default
+    image: web

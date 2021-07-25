@@ -13,19 +13,12 @@ WORKDIR /code
 
 # Install dependencies
 COPY Pipfile Pipfile.lock /code/
+RUN pip install --upgrade pip
 RUN pip install pipenv && pipenv install --system
 
 # Copy project
 COPY . /code/
 
-# Create staticfiles
-RUN mkdir -p /code/staticfiles/
-
 # Copy Static files
-CMD python manage.py collectstatic --noinput
+RUN python manage.py collectstatic --noinput
 
-# Run database migrations
-CMD python manage.py migrate
-
-# Start server
-CMD gunicorn kotoko_express_dashboard.wsgi

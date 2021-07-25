@@ -9,10 +9,18 @@ https://docs.djangoproject.com/en/3.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.2/ref/settings/
 """
+
+# Python imports
 import os
 from pathlib import Path
+
+# Third-party app imports
 import dj_database_url
+import sentry_sdk
+# Django imports
 from django.core.management.utils import get_random_secret_key
+from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.rq import RqIntegration
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -27,21 +35,22 @@ ENVIRONMENT = os.environ.get('ENVIRONMENT', default='production')
 SECRET_KEY = os.environ.get('SECRET_KEY',  default=get_random_secret_key())
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 0)
+DEBUG = bool(os.environ.get('DEBUG', False))
 
-ALLOWED_HOSTS = ['.herokuapp.com', 'localhost', '127.0.0.1']
+# Allow host
+ALLOWED_HOSTS = ['asante-kotoko-portal.herokuapp.com', '.herokuapp.com', 'localhost', '127.0.0.1']
 
 
 # Application definition
 
 INSTALLED_APPS = [
 
-    'whitenoise.runserver_nostatic',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
 
     # Third-party apps
@@ -55,6 +64,8 @@ INSTALLED_APPS = [
     #'debug_toolbar',
 
     # Local apps
+    'users.apps.UsersConfig',
+    'errors.apps.ErrorsConfig',
 ]
 
 MIDDLEWARE = [
@@ -122,6 +133,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+AUTH_USER_MODEL = 'users.CustomUser'
+
 # Internationalization
 # https://docs.djangoproject.com/en/3.2/topics/i18n/
 
@@ -136,19 +149,20 @@ USE_L10N = True
 USE_TZ = True
 
 # Cloudinary Credentials
+# https://github.com/klis87/django-cloudinary-storage
 
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.environ.get("CLOUDINARY_CLOUD_NAME"),
     'API_KEY': os.environ.get("CLOUDINARY_API_KEY"),
     'API_SECRET': os.environ.get("CLOUDINARY_API_SECRET"),
-    'STATICFILES_MANIFEST_ROOT': BASE_DIR / 'my-manifest-directory',
 }
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = (str(BASE_DIR.joinpath("static")),)
+STATICFILES_DIRS = (str(BASE_DIR.joinpath('static')),)
 STATIC_ROOT = str(BASE_DIR.joinpath('staticfiles'))
 STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",
@@ -196,14 +210,17 @@ RQ_QUEUES = {
 
 # Redis Cache Settings
 # See docs at https://django-redis-cache.readthedocs.io/en/latest/intro_quick_start.html#quick-start
-#
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'redis_cache.RedisCache',
-#         # By default use Docker Compose Redis instance.
-#         'LOCATION': os.getenv('REDIS_URL', 'redis:6379'),
-#     },
-# }
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        # By default use Docker Compose Redis instance.
+        'LOCATION': os.getenv('REDIS_URL', 'redis:6379'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    },
+}
 
 
 # Production Configuration
@@ -242,3 +259,109 @@ if ENVIRONMENT == 'production':
     CSRF_COOKIE_SECURE = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+
+# Logging Configuration
+# https://docs.djangoproject.com/en/3.2/topics/logging/
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+        'django.server': {
+            '()': 'django.utils.log.ServerFormatter',
+            'format': '[%(server_time)s] %(message)s',
+        },
+    },
+
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+    },
+
+    'handlers': {
+        'logfile': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / "logfile",
+            'maxBytes': 50000,
+            'backupCount': 2,
+            'formatter': 'simple',
+        },
+        'console': {
+            'level': 'INFO',
+            'filters': ['require_debug_true'],
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+        'django.server': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'django.server',
+        },
+
+    },
+    'loggers': {
+        'null': {
+            'level': 'DEBUG',
+            'class': 'logging.NullHandler',
+        },
+        'django': {
+            'handlers': ['console'],
+            'propagate': True,
+        },
+        'django.request': {
+            'handlers': ['console', 'logfile'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.server': {
+            'handlers': ['django.server'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'kotoko_express_dashboard': {
+            'handlers': ['console', 'logfile'],
+            'level': 'INFO',
+        }
+    }
+}
+
+
+# Sentry Error Reporting
+# https://sentry.io/welcome/
+
+# Django-sentry
+
+sentry_sdk.init(
+    dsn=os.environ.get('DJANGO_SENTRY_DSN'),
+    integrations=[DjangoIntegration()],
+
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # We recommend adjusting this value in production.
+    traces_sample_rate=0.5,
+
+    # If you wish to associate users to errors (assuming you are using
+    # django.contrib.auth) you may enable sending PII data.
+    send_default_pii=True
+)
+
+# Redis sentry
+
+sentry_sdk.init(os.environ.get('REDIS_SENTRY_DSN'), integrations=[RqIntegration()])

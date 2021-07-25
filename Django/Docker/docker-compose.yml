@@ -48,3 +48,52 @@ volumes:
 
 
 
+#version: '3.8'
+#
+#services:
+#
+#    web:
+#        container_name: kotoko-express-dashboard
+#        build: .
+#        command: bash -c "python manage.py collectstatic --noinput && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+#        env_file:
+#            -   .env
+#        volumes:
+#            - .:/code
+#          #  - /staticfiles:/staticfiles
+#        ports:
+#            - 8000:8000
+#        depends_on:
+#            - db
+#            - redis
+#
+#    worker:
+#        container_name: background-worker
+#        build: .
+#        command: python /code/manage.py rqworker default
+#        env_file:
+#            - .env
+#        volumes:
+#            - .:/code
+#        depends_on:
+#            - web
+#
+#    db:
+#        container_name: postgres-database
+#        image: postgres:12.0-alpine
+#        restart: always
+#        env_file:
+#            - .env
+#        ports:
+#            - "5432:5432"
+#        volumes:
+#            - postgres_data:/var/lib/postgresql/data/
+#
+#    redis:
+#        container_name: redis-server
+#        image: redis:alpine
+#
+#volumes:
+#    postgres_data:
+#
+
